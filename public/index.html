@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>doc2mp3</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #333;
+      --text: #e8e8e8;
+      --text2: #999;
+      --accent: #6c63ff;
+      --accent-hover: #7b73ff;
+      --success: #22c55e;
+      --error: #ef4444;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--text2);
+      font-size: 0.95rem;
+      margin-bottom: 32px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface);
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--surface2);
+    }
+
+    .drop-zone .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .drop-zone p {
+      color: var(--text2);
+      font-size: 0.9rem;
+    }
+
+    .drop-zone .formats {
+      font-size: 0.78rem;
+      color: var(--text2);
+      opacity: 0.7;
+      margin-top: 8px;
+    }
+
+    .file-input { display: none; }
+
+    .options {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .options label {
+      font-size: 0.8rem;
+      color: var(--text2);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .options select, .options input {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.85rem;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: var(--radius);
+      display: none;
+    }
+
+    .status.converting {
+      display: block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+
+    .status.success {
+      display: block;
+      background: #0d2818;
+      border: 1px solid #166534;
+    }
+
+    .status.error {
+      display: block;
+      background: #2d0f0f;
+      border: 1px solid #7f1d1d;
+    }
+
+    .status .label {
+      font-size: 0.8rem;
+      color: var(--text2);
+      margin-bottom: 8px;
+    }
+
+    .status .message {
+      font-size: 0.9rem;
+    }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .progress-bar .fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0%;
+      animation: indeterminate 1.5s ease-in-out infinite;
+    }
+
+    @keyframes indeterminate {
+      0% { width: 0%; margin-left: 0%; }
+      50% { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+
+    .result {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .result audio {
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    .result .meta {
+      font-size: 0.78rem;
+      color: var(--text2);
+    }
+
+    .result .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s;
+      align-self: flex-start;
+    }
+
+    .result .download-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .engine-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .selected-file {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .selected-file.visible { display: flex; }
+
+    .selected-file .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .selected-file .size {
+      color: var(--text2);
+      font-size: 0.78rem;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+
+    .convert-btn {
+      margin-top: 16px;
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: none;
+    }
+
+    .convert-btn:hover { background: var(--accent-hover); }
+    .convert-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .convert-btn.visible { display: block; }
+  </style>
+</head>
+<body>
+  <h1>doc2mp3 <span class="engine-badge" id="engineBadge">loading...</span></h1>
+  <p class="subtitle">Drop a document, get an MP3</p>
+
+  <div class="container">
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">&#128196;</div>
+      <p>Drag &amp; drop your document here, or click to browse</p>
+      <p class="formats" id="formatsList">Loading supported formats...</p>
+    </div>
+    <input type="file" class="file-input" id="fileInput">
+
+    <div class="selected-file" id="selectedFile">
+      <span class="name" id="fileName"></span>
+      <span class="size" id="fileSize"></span>
+    </div>
+
+    <div class="options">
+      <label>
+        Voice
+        <select id="voiceSelect"></select>
+      </label>
+      <label>
+        Speed
+        <input type="number" id="speedInput" min="0.5" max="2.0" step="0.1" value="1.0">
+      </label>
+    </div>
+
+    <button class="convert-btn" id="convertBtn">Convert to MP3</button>
+
+    <div class="status" id="status">
+      <div class="label" id="statusLabel"></div>
+      <div class="message" id="statusMessage"></div>
+      <div class="progress-bar" id="progressBar" style="display:none">
+        <div class="fill"></div>
+      </div>
+      <div class="result" id="result" style="display:none"></div>
+    </div>
+  </div>
+
+  <script>
+    let selectedFile = null;
+    let config = {};
+
+    async function loadConfig() {
+      const res = await fetch("/api/config");
+      config = await res.json();
+      document.getElementById("engineBadge").textContent = "Edge TTS";
+      document.getElementById("formatsList").textContent = `Supports: ${config.supportedFormats.join(", ")}`;
+
+      const voiceSelect = document.getElementById("voiceSelect");
+      voiceSelect.innerHTML = config.voices.map(v =>
+        `<option value="${v.id}">${v.name}</option>`
+      ).join("");
+      voiceSelect.value = "en-US-AriaNeural";
+
+      const fileInput = document.getElementById("fileInput");
+      fileInput.accept = config.supportedFormats.join(",");
+    }
+
+    loadConfig();
+
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("drag-over");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("drag-over");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      if (e.dataTransfer.files.length) selectFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) selectFile(fileInput.files[0]);
+    });
+
+    function selectFile(file) {
+      selectedFile = file;
+      document.getElementById("fileName").textContent = file.name;
+      document.getElementById("fileSize").textContent = formatSize(file.size);
+      document.getElementById("selectedFile").classList.add("visible");
+      document.getElementById("convertBtn").classList.add("visible");
+      resetStatus();
+    }
+
+    document.getElementById("convertBtn").addEventListener("click", convert);
+
+    async function convert() {
+      if (!selectedFile) return;
+
+      const btn = document.getElementById("convertBtn");
+      btn.disabled = true;
+      btn.textContent = "Converting...";
+
+      showStatus("converting", "Converting", `Processing ${selectedFile.name}...`);
+      document.getElementById("progressBar").style.display = "block";
+      document.getElementById("result").style.display = "none";
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("voice", document.getElementById("voiceSelect").value);
+      formData.append("speed", document.getElementById("speedInput").value);
+
+      try {
+        const res = await fetch("/api/convert", { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error);
+
+        document.getElementById("progressBar").style.display = "none";
+        showStatus("success", "Done", `Converted ${data.textLength.toLocaleString()} characters using ${data.engine} (${data.voice})`);
+
+        document.getElementById("result").style.display = "flex";
+        document.getElementById("result").innerHTML = `
+          <audio controls src="${data.url}"></audio>
+          <span class="meta">${formatSize(data.fileSize)} &middot; ${data.chunks || 1} chunk(s)</span>
+          <a class="download-btn" href="${data.url}" download="${data.filename}">Download MP3</a>
+        `;
+      } catch (err) {
+        document.getElementById("progressBar").style.display = "none";
+        showStatus("error", "Error", err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Convert to MP3";
+      }
+    }
+
+    function showStatus(type, label, message) {
+      const el = document.getElementById("status");
+      el.className = `status ${type}`;
+      document.getElementById("statusLabel").textContent = label;
+      document.getElementById("statusMessage").textContent = message;
+    }
+
+    function resetStatus() {
+      document.getElementById("status").className = "status";
+      document.getElementById("result").style.display = "none";
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+  </script>
+</body>
+</html>
